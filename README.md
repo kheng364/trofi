@@ -1,2 +1,2 @@
-# pokolane
+#trofi
 smart QR menu
