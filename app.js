@@ -4,7 +4,9 @@ import {
   ref,
   push,
   onValue,
-  remove
+  remove,
+  set,
+  update
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
@@ -20,19 +22,50 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const LS = {
-  get(key, fallback) {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch {
-      return fallback;
-    }
+let foods = [];
+let cart = {};
+let activeCategory = "All";
+
+const CATEGORY_ORDER = ["All", "Grill", "Fry", "Soup", "Rice", "Fast Food", "Drink", "Beer"];
+
+const defaultFoods = [
+  {
+    name: "Fried Rice",
+    price: 2,
+    category: "Rice",
+    img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80"
   },
-  set(key, val) {
-    localStorage.setItem(key, JSON.stringify(val));
+  {
+    name: "Noodles",
+    price: 2.5,
+    category: "Soup",
+    img: "https://images.unsplash.com/photo-1526318896980-cf78c088247c?w=800&q=80"
+  },
+  {
+    name: "Burger",
+    price: 4,
+    category: "Fast Food",
+    img: "https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&q=80"
+  },
+  {
+    name: "French Fries",
+    price: 1.9,
+    category: "Fry",
+    img: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=800&q=80"
+  },
+  {
+    name: "Coffee",
+    price: 1.25,
+    category: "Drink",
+    img: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80"
+  },
+  {
+    name: "Beer",
+    price: 3,
+    category: "Beer",
+    img: "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&q=80"
   }
-};
+];
 
 function qs(id) {
   return document.getElementById(id);
@@ -44,10 +77,6 @@ function money(n) {
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
-}
-
-function cryptoId() {
-  return crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random().toString(16);
 }
 
 function escapeHtml(s) {
@@ -68,75 +97,51 @@ function getTableFromUrl() {
   return params.get("table") || "1";
 }
 
-function ensureSeed() {
-  if (!LS.get("adminCred", null)) {
-    LS.set("adminCred", { username: "admin", password: "1234" });
-  }
-
-  const foods = LS.get("foods", null);
-
-  if (!Array.isArray(foods) || foods.length === 0) {
-    LS.set("foods", [
-      {
-        id: cryptoId(),
-        name: "Fried Rice",
-        price: 5,
-        category: "Rice",
-        img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80"
-      },
-      {
-        id: cryptoId(),
-        name: "Noodles",
-        price: 4.5,
-        category: "Soup",
-        img: "https://images.unsplash.com/photo-1526318896980-cf78c088247c?w=800&q=80"
-      },
-      {
-        id: cryptoId(),
-        name: "Burger",
-        price: 6,
-        category: "Fast Food",
-        img: "https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&q=80"
-      },
-      {
-        id: cryptoId(),
-        name: "French Fries",
-        price: 2,
-        category: "Fry",
-        img: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=800&q=80"
-      },
-      {
-        id: cryptoId(),
-        name: "Coffee",
-        price: 2,
-        category: "Drink",
-        img: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80"
-      }
-    ]);
+function ensureAdminCred() {
+  if (!localStorage.getItem("adminCred")) {
+    localStorage.setItem("adminCred", JSON.stringify({ username: "admin", password: "1234" }));
   }
 }
 
-let cart = {};
-let activeCategory = "All";
+function listenFoods(callback) {
+  onValue(ref(db, "foods"), async snapshot => {
+    const data = snapshot.val();
 
-const CATEGORY_ORDER = ["All", "Grill", "Fry", "Soup", "Rice", "Fast Food", "Drink", "Beer"];
+    if (!data) {
+      for (const food of defaultFoods) {
+        await push(ref(db, "foods"), food);
+      }
+      return;
+    }
+
+    foods = Object.entries(data).map(([id, food]) => ({
+      id,
+      ...food
+    }));
+
+    callback();
+  });
+}
+
+/* CUSTOMER MENU */
 
 function renderMenuPage() {
-  ensureSeed();
+  ensureAdminCred();
 
   const table = getTableFromUrl();
   if (qs("tableBadge")) qs("tableBadge").textContent = `Table ${table}`;
 
-  buildCategoryChips();
-  applyMenuFilters();
-  renderCart();
+  listenFoods(() => {
+    buildCategoryChips();
+    applyMenuFilters();
+    renderCart();
+  });
 }
 
 function buildCategoryChips() {
   const wrap = qs("catChips");
   if (!wrap) return;
 
-  const foods = LS.get("foods", []);
   const existing = new Set(foods.map(f => f.category || "Other"));
   const cats = CATEGORY_ORDER.filter(c => c === "All" || existing.has(c));
 
@@ -153,7 +158,6 @@ function setCategory(cat) {
 }
 
 function applyMenuFilters() {
-  const foods = LS.get("foods", []);
   const q = (qs("searchInput")?.value || "").toLowerCase();
 
   const filtered = foods.filter(f => {
@@ -166,17 +170,18 @@ function applyMenuFilters() {
   buildCategoryChips();
 }
 
-function renderMenuList(foods) {
+function renderMenuList(list) {
   const wrap = qs("menuList");
   if (!wrap) return;
 
-  if (foods.length === 0) {
+  if (list.length === 0) {
     wrap.innerHTML = `<div class="menuItem"><p class="note">No food found.</p></div>`;
     return;
   }
 
-  wrap.innerHTML = foods.map(food => {
+  wrap.innerHTML = list.map(food => {
     const qty = cart[food.id]?.qty || 0;
+
     return `
       <div class="menuItem">
         <img src="${food.img}" alt="${escapeHtml(food.name)}">
@@ -195,7 +200,7 @@ function renderMenuList(foods) {
 }
 
 function increase(foodId) {
-  const food = LS.get("foods", []).find(f => f.id === foodId);
+  const food = foods.find(f => f.id === foodId);
   if (!food) return;
 
   if (!cart[foodId]) cart[foodId] = { ...food, qty: 0 };
@@ -291,6 +296,8 @@ async function submitOrder() {
   alert("Order sent to admin!");
 }
 
+/* ADMIN LOGIN */
+
 function isAdminLoggedIn() {
   return localStorage.getItem("adminLoggedIn") === "true";
 }
@@ -302,11 +309,11 @@ function requireAdmin() {
 }
 
 function adminLogin() {
-  ensureSeed();
+  ensureAdminCred();
 
   const u = qs("username")?.value.trim();
   const p = qs("password")?.value.trim();
-  const cred = LS.get("adminCred", { username: "admin", password: "1234" });
+  const cred = JSON.parse(localStorage.getItem("adminCred"));
 
   if (u === cred.username && p === cred.password) {
     localStorage.setItem("adminLoggedIn", "true");
@@ -322,12 +329,14 @@ function adminLogout() {
 }
 
 function resetAdminCred() {
-  LS.set("adminCred", { username: "admin", password: "1234" });
+  localStorage.setItem("adminCred", JSON.stringify({ username: "admin", password: "1234" }));
   alert("Reset done: admin / 1234");
 }
 
+/* ADMIN DASHBOARD */
+
 function renderAdminPage() {
-  ensureSeed();
+  ensureAdminCred();
   requireAdmin();
 
   onValue(ref(db, "orders"), snapshot => {
@@ -339,7 +348,9 @@ function renderAdminPage() {
     renderSalesChart(orders);
   });
 
-  renderFoodsTable(LS.get("foods", []));
+  listenFoods(() => {
+    renderFoodsTable();
+  });
 }
 
 function renderAdminStats(orders) {
@@ -432,7 +443,9 @@ async function deleteOrder(id) {
   await remove(ref(db, `orders/${id}`));
 }
 
-function renderFoodsTable(foods) {
+/* FIREBASE FOOD MANAGEMENT */
+
+function renderFoodsTable() {
   const wrap = qs("foodsWrap");
   if (!wrap) return;
 
@@ -488,7 +501,7 @@ function renderFoodsTable(foods) {
   `;
 }
 
-function addFood() {
+async function addFood() {
   const name = qs("newFoodName").value.trim();
   const price = Number(qs("newFoodPrice").value);
   const category = qs("newFoodCat").value.trim() || "Other";
@@ -499,42 +512,47 @@ function addFood() {
     return;
   }
 
-  const foods = LS.get("foods", []);
-  foods.push({ id: cryptoId(), name, price, category, img });
-  LS.set("foods", foods);
-  renderFoodsTable(foods);
+  await push(ref(db, "foods"), { name, price, category, img });
+  alert("Food added!");
 }
 
-function updateFood(id) {
-  const foods = LS.get("foods", []);
-  const index = foods.findIndex(f => f.id === id);
-  if (index === -1) return;
+async function updateFood(id) {
+  const name = qs(`fn-${id}`).value.trim();
+  const category = qs(`fc-${id}`).value.trim();
+  const price = Number(qs(`fp-${id}`).value);
+  const img = qs(`fi-${id}`).value.trim();
 
-  foods[index] = {
-    id,
-    name: qs(`fn-${id}`).value.trim(),
-    category: qs(`fc-${id}`).value.trim(),
-    price: Number(qs(`fp-${id}`).value),
-    img: qs(`fi-${id}`).value.trim()
-  };
+  if (!name || !price || !img) {
+    alert("Invalid food data.");
+    return;
+  }
 
-  LS.set("foods", foods);
+  await update(ref(db, `foods/${id}`), {
+    name,
+    category,
+    price,
+    img
+  });
+
   alert("Food updated!");
 }
 
-function deleteFood(id) {
-  const foods = LS.get("foods", []).filter(f => f.id !== id);
-  LS.set("foods", foods);
-  renderFoodsTable(foods);
+async function deleteFood(id) {
+  if (!confirm("Delete this food?")) return;
+  await remove(ref(db, `foods/${id}`));
 }
+
+/* AUTO INIT */
 
 window.addEventListener("DOMContentLoaded", () => {
   const page = document.body.getAttribute("data-page");
 
   if (page === "menu") renderMenuPage();
-  if (page === "admin-login") ensureSeed();
+  if (page === "admin-login") ensureAdminCred();
   if (page === "admin") renderAdminPage();
 });
+
+/* EXPOSE FUNCTIONS */
 
 window.increase = increase;
 window.decrease = decrease;
