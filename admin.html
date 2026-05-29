@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trofí Dashboard</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body data-page="admin">
+
+<header class="siteHeader">
+  <div class="brandLogo">T</div>
+  <div class="brandText">
+    <h1>Trofí</h1>
+    <p>Restaurant Dashboard</p>
+  </div>
+
+  <nav class="adminNav">
+    <a href="menu.html">Menu</a>
+    <a href="qrcodes.html">QR Codes</a>
+    <button onclick="adminLogout()">Logout</button>
+  </nav>
+</header>
+
+<main class="appShell">
+  <section class="dashboardHero">
+    <span class="miniLabel">MANAGEMENT</span>
+    <h2>Restaurant Control Center</h2>
+    <p>Monitor orders, track sales, manage foods, and generate QR codes.</p>
+  </section>
+
+  <section class="kpiGrid">
+    <div class="kpiCard">
+      <span>Today Orders</span>
+      <strong id="kpiTodayOrders">0</strong>
+    </div>
+    <div class="kpiCard highlight">
+      <span>Today Sales</span>
+      <strong id="kpiTodaySales">$0.00</strong>
+    </div>
+    <div class="kpiCard">
+      <span>Total Orders</span>
+      <strong id="kpiTotalOrders">0</strong>
+    </div>
+  </section>
+
+  <section class="panelCard">
+    <div class="sectionHeader">
+      <span class="miniLabel">REPORT</span>
+      <h2>Sales Per Day</h2>
+    </div>
+    <canvas id="salesChart" height="120"></canvas>
+  </section>
+
+  <div id="ordersWrap"></div>
+  <div id="foodsWrap"></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

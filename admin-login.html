@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trofí Admin Login</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body data-page="admin-login">
+
+<header class="siteHeader">
+  <div class="brandLogo">T</div>
+  <div class="brandText">
+    <h1>Trofí</h1>
+    <p>Admin Portal</p>
+  </div>
+</header>
+
+<main class="authPage">
+  <section class="authCard">
+    <span class="miniLabel">ADMIN ACCESS</span>
+    <h2>Welcome back</h2>
+    <p>Login to manage orders, menu items, QR codes, and daily sales.</p>
+
+    <label>Username</label>
+    <input id="username" placeholder="admin">
+
+    <label>Password</label>
+    <input id="password" type="password" placeholder="1234">
+
+    <button class="primaryButton" onclick="adminLogin()">Login</button>
+    <button class="secondaryButton" onclick="resetAdminCred()">Reset Admin</button>
+
+    <small>Default login: admin / 1234</small>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

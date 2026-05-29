@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trofí Menu</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body data-page="menu">
+
+<header class="siteHeader customerHeader">
+  <div class="brandLogo">T</div>
+  <div class="brandText">
+    <h1>Trofí</h1>
+    <p>Smart QR Dining</p>
+  </div>
+  <div class="tablePill" id="tableBadge">Table</div>
+</header>
+
+<main class="appShell">
+  <section class="menuHero">
+    <div>
+      <span class="miniLabel">SCAN • ORDER • ENJOY</span>
+      <h2>Explore the menu</h2>
+      <p>Choose your favorite dishes and send your order directly from your table.</p>
+    </div>
+
+    <input id="searchInput" class="searchInput" placeholder="Search food..." oninput="applyMenuFilters()" />
+    <div id="catChips" class="chips"></div>
+  </section>
+
+  <section class="contentGrid">
+    <section>
+      <div class="sectionHeader">
+        <span class="miniLabel">TODAY’S MENU</span>
+        <h2>Available dishes</h2>
+      </div>
+
+      <div id="menuList" class="menuList"></div>
+    </section>
+
+    <aside class="cartPanel">
+      <span class="miniLabel">YOUR CART</span>
+      <h2>Order Summary</h2>
+
+      <div id="cartItems"></div>
+
+      <div class="divider"></div>
+
+      <label>Request to chef</label>
+      <textarea id="chefRequest" placeholder="Example: no spicy, less salt..."></textarea>
+
+      <div class="totalBox">
+        <span>Total</span>
+        <strong>$<span id="totalPrice">0.00</span></strong>
+      </div>
+
+      <button class="primaryButton" onclick="submitOrder()">Place Order</button>
+    </aside>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

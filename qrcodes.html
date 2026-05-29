@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trofí QR Generator</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<header class="siteHeader">
+  <div class="brandLogo">T</div>
+  <div class="brandText">
+    <h1>Trofí</h1>
+    <p>QR Table Generator</p>
+  </div>
+
+  <nav class="adminNav">
+    <a href="menu.html">Menu</a>
+    <a href="admin-login.html">Dashboard</a>
+  </nav>
+</header>
+
+<main class="appShell">
+  <section class="dashboardHero">
+    <span class="miniLabel">QR TOOL</span>
+    <h2>Generate table QR codes</h2>
+    <p>Use your public website link so customers can scan from any phone and any internet.</p>
+
+    <label>Base URL</label>
+    <input id="baseUrl" placeholder="https://kheng364.github.io/pokolane/menu.html">
+
+    <div class="formGrid">
+      <div>
+        <label>How many tables?</label>
+        <input id="tableCount" type="number" value="10">
+      </div>
+      <div>
+        <label>Start from</label>
+        <input id="tableStart" type="number" value="1">
+      </div>
+    </div>
+
+    <button class="primaryButton" onclick="makeQRs()">Generate QR Codes</button>
+    <div id="status"></div>
+  </section>
+
+  <section id="qrGrid" class="qrgrid"></section>
+</main>
+
+<script src="qrcode.min.js"></script>
+<script>
+function makeQRs(){
+  const base = document.getElementById("baseUrl").value.trim().replace(/\/+$/, "");
+  const count = Number(document.getElementById("tableCount").value);
+  const start = Number(document.getElementById("tableStart").value);
+  const grid = document.getElementById("qrGrid");
+  const status = document.getElementById("status");
+
+  if(!window.QRCode){
+    status.innerHTML = '<p class="err">qrcode.min.js not loaded</p>';
+    return;
+  }
+
+  if(!base){
+    status.innerHTML = '<p class="err">Please enter Base URL</p>';
+    return;
+  }
+
+  grid.innerHTML = "";
+
+  for(let t = start; t < start + count; t++){
+    const url = `${base}?table=${t}`;
+    const card = document.createElement("div");
+    card.className = "panelCard qrbox";
+    card.innerHTML = `
+      <h2>Table ${t}</h2>
+      <div id="qr-${t}"></div>
+      <p>${url}</p>
+      <a class="secondaryButton" href="${url}" target="_blank">Open Link</a>
+    `;
+    grid.appendChild(card);
+
+    new QRCode(document.getElementById(`qr-${t}`), {
+      text:url,
+      width:170,
+      height:170
+    });
+  }
+
+  status.innerHTML = '<p class="ok">QR codes generated successfully ✅</p>';
+}
+</script>
+</body>
+</html>
