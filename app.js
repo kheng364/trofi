@@ -1,6 +1,25 @@
-/*****************
-  Storage helper
-******************/
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  push,
+  onValue,
+  remove
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA1WLxLX5TzwxR1mip6sbkPiQfCbOCO-5w",
+  authDomain: "trofi-97629.firebaseapp.com",
+  databaseURL: "https://trofi-97629-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "trofi-97629",
+  storageBucket: "trofi-97629.firebasestorage.app",
+  messagingSenderId: "1018385943184",
+  appId: "1:1018385943184:web:1448f087f21ba57ee72615"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
 const LS = {
   get(key, fallback) {
     try {
@@ -19,22 +38,20 @@ function qs(id) {
   return document.getElementById(id);
 }
 
+function money(n) {
+  return Number(n || 0).toFixed(2);
+}
+
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function money(n) {
-  return Number(n).toFixed(2);
-}
-
 function cryptoId() {
-  return (typeof crypto !== "undefined" && crypto.randomUUID)
-    ? crypto.randomUUID()
-    : String(Date.now()) + Math.random().toString(16).slice(2);
+  return crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random().toString(16);
 }
 
 function escapeHtml(s) {
-  return String(s)
+  return String(s || "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -43,37 +60,7 @@ function escapeHtml(s) {
 }
 
 function getUnit(category) {
-  return (category === "Drink" || category === "Beer") ? "per drink" : "per dish";
-}
-
-/*****************
-  Seed
-******************/
-function ensureSeed() {
-  const cred = LS.get("adminCred", null);
-
-  if (!cred || typeof cred.username !== "string" || typeof cred.password !== "string") {
-    LS.set("adminCred", { username: "admin", password: "1234" });
-  }
-
-  const foods = LS.get("foods", null);
-
-  if (!Array.isArray(foods) || foods.length === 0) {
-    LS.set("foods", [
-      { id: cryptoId(), name: "Fried Rice", price: 5.00, category: "Rice", img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80" },
-      { id: cryptoId(), name: "Noodles", price: 4.50, category: "Soup", img: "https://images.unsplash.com/photo-1526318896980-cf78c088247c?w=800&q=80" },
-      { id: cryptoId(), name: "Burger", price: 6.00, category: "Fast Food", img: "https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&q=80" },
-      { id: cryptoId(), name: "French Fries", price: 2.00, category: "Fry", img: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=800&q=80" },
-      { id: cryptoId(), name: "Grill Chicken", price: 5.50, category: "Grill", img: "https://images.unsplash.com/photo-1604908554049-25d644cd6b4b?w=800&q=80" },
-      { id: cryptoId(), name: "Coffee", price: 2.00, category: "Drink", img: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80" },
-      { id: cryptoId(), name: "Beer", price: 3.00, category: "Beer", img: "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&q=80" }
-    ]);
-  }
-
-  const orders = LS.get("orders", null);
-  if (!Array.isArray(orders)) {
-    LS.set("orders", []);
-  }
+  return category === "Drink" || category === "Beer" ? "per drink" : "per dish";
 }
 
 function getTableFromUrl() {
@@ -81,9 +68,54 @@ function getTableFromUrl() {
   return params.get("table") || "1";
 }
 
-/*****************
-  Customer Menu
-******************/
+function ensureSeed() {
+  if (!LS.get("adminCred", null)) {
+    LS.set("adminCred", { username: "admin", password: "1234" });
+  }
+
+  const foods = LS.get("foods", null);
+
+  if (!Array.isArray(foods) || foods.length === 0) {
+    LS.set("foods", [
+      {
+        id: cryptoId(),
+        name: "Fried Rice",
+        price: 5,
+        category: "Rice",
+        img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80"
+      },
+      {
+        id: cryptoId(),
+        name: "Noodles",
+        price: 4.5,
+        category: "Soup",
+        img: "https://images.unsplash.com/photo-1526318896980-cf78c088247c?w=800&q=80"
+      },
+      {
+        id: cryptoId(),
+        name: "Burger",
+        price: 6,
+        category: "Fast Food",
+        img: "https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&q=80"
+      },
+      {
+        id: cryptoId(),
+        name: "French Fries",
+        price: 2,
+        category: "Fry",
+        img: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=800&q=80"
+      },
+      {
+        id: cryptoId(),
+        name: "Coffee",
+        price: 2,
+        category: "Drink",
+        img: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80"
+      }
+    ]);
+  }
+}
+
 let cart = {};
 let activeCategory = "All";
 
@@ -93,23 +125,23 @@ function renderMenuPage() {
   ensureSeed();
 
   const table = getTableFromUrl();
-  qs("tableBadge").textContent = `Table ${table}`;
+  if (qs("tableBadge")) qs("tableBadge").textContent = `Table ${table}`;
 
-  const foods = LS.get("foods", []);
-  buildCategoryChips(foods);
+  buildCategoryChips();
   applyMenuFilters();
   renderCart();
 }
 
-function buildCategoryChips(foods) {
+function buildCategoryChips() {
   const wrap = qs("catChips");
   if (!wrap) return;
 
+  const foods = LS.get("foods", []);
   const existing = new Set(foods.map(f => f.category || "Other"));
   const cats = CATEGORY_ORDER.filter(c => c === "All" || existing.has(c));
 
   wrap.innerHTML = cats.map(c => `
-    <div class="chip ${c === activeCategory ? "active" : ""}" onclick="setCategory('${escapeHtml(c)}')">
+    <div class="chip ${c === activeCategory ? "active" : ""}" onclick="setCategory('${c}')">
       ${escapeHtml(c)}
     </div>
   `).join("");
@@ -122,64 +154,53 @@ function setCategory(cat) {
 
 function applyMenuFilters() {
   const foods = LS.get("foods", []);
-  const q = (qs("searchInput")?.value || "").trim().toLowerCase();
+  const q = (qs("searchInput")?.value || "").toLowerCase();
 
   const filtered = foods.filter(f => {
-    const cat = f.category || "Other";
-    const okCat = activeCategory === "All" ? true : cat === activeCategory;
-    const okSearch = !q ? true : (f.name || "").toLowerCase().includes(q);
+    const okCat = activeCategory === "All" || f.category === activeCategory;
+    const okSearch = !q || f.name.toLowerCase().includes(q);
     return okCat && okSearch;
   });
 
   renderMenuList(filtered);
-  buildCategoryChips(foods);
+  buildCategoryChips();
 }
 
 function renderMenuList(foods) {
   const wrap = qs("menuList");
   if (!wrap) return;
 
-  wrap.innerHTML = "";
-
   if (foods.length === 0) {
-    wrap.innerHTML = `<div class="menuItem"><div class="note">No food found.</div></div>`;
+    wrap.innerHTML = `<div class="menuItem"><p class="note">No food found.</p></div>`;
     return;
   }
 
-  foods.forEach(food => {
+  wrap.innerHTML = foods.map(food => {
     const qty = cart[food.id]?.qty || 0;
-    const unit = getUnit(food.category);
-
-    const el = document.createElement("div");
-    el.className = "menuItem";
-
-    el.innerHTML = `
-      <img src="${food.img}" alt="${escapeHtml(food.name)}">
-      <div class="menuInfo">
-        <div class="menuName">${escapeHtml(food.name)}</div>
-        <div class="menuPrice">$${money(food.price)} ${unit}</div>
-      </div>
-      <div class="qtyRow">
-        <button class="qtyBtn minus" onclick="decrease('${food.id}')">-</button>
-        <div class="qtyNum">${qty}</div>
-        <button class="qtyBtn plus" onclick="increase('${food.id}')">+</button>
+    return `
+      <div class="menuItem">
+        <img src="${food.img}" alt="${escapeHtml(food.name)}">
+        <div class="menuInfo">
+          <div class="menuName">${escapeHtml(food.name)}</div>
+          <div class="menuPrice">$${money(food.price)} ${getUnit(food.category)}</div>
+        </div>
+        <div class="qtyRow">
+          <button class="qtyBtn minus" onclick="decrease('${food.id}')">-</button>
+          <div class="qtyNum">${qty}</div>
+          <button class="qtyBtn plus" onclick="increase('${food.id}')">+</button>
+        </div>
       </div>
     `;
-
-    wrap.appendChild(el);
-  });
+  }).join("");
 }
 
 function increase(foodId) {
-  const foods = LS.get("foods", []);
-  const food = foods.find(f => f.id === foodId);
+  const food = LS.get("foods", []).find(f => f.id === foodId);
   if (!food) return;
 
-  if (!cart[foodId]) {
-    cart[foodId] = { ...food, qty: 0 };
-  }
+  if (!cart[foodId]) cart[foodId] = { ...food, qty: 0 };
+  cart[foodId].qty++;
 
-  cart[foodId].qty += 1;
   applyMenuFilters();
   renderCart();
 }
@@ -187,21 +208,16 @@ function increase(foodId) {
 function decrease(foodId) {
   if (!cart[foodId]) return;
 
-  cart[foodId].qty -= 1;
+  cart[foodId].qty--;
 
-  if (cart[foodId].qty <= 0) {
-    delete cart[foodId];
-  }
+  if (cart[foodId].qty <= 0) delete cart[foodId];
 
   applyMenuFilters();
   renderCart();
 }
 
 function removeItem(foodId) {
-  if (cart[foodId]) {
-    delete cart[foodId];
-  }
-
+  delete cart[foodId];
   applyMenuFilters();
   renderCart();
 }
@@ -214,7 +230,7 @@ function renderCart() {
   const items = Object.values(cart);
 
   if (items.length === 0) {
-    cartDiv.innerHTML = `<div class="note">No items selected yet.</div>`;
+    cartDiv.innerHTML = `<p class="note">No items selected yet.</p>`;
     totalEl.textContent = "0.00";
     return;
   }
@@ -226,20 +242,18 @@ function renderCart() {
         <div class="note">$${money(it.price)} × ${it.qty}</div>
       </div>
       <div class="cart-actions">
-        <button class="btn gray small" onclick="decrease('${it.id}')">-</button>
-        <span style="font-weight:800">${it.qty}</span>
-        <button class="btn gray small" onclick="increase('${it.id}')">+</button>
+        <button class="btn small" onclick="decrease('${it.id}')">-</button>
+        <button class="btn small" onclick="increase('${it.id}')">+</button>
         <button class="btn danger small" onclick="removeItem('${it.id}')">Remove</button>
       </div>
     </div>
   `).join("<hr>");
 
-  const total = items.reduce((s, it) => s + it.price * it.qty, 0);
+  const total = items.reduce((s, it) => s + Number(it.price) * it.qty, 0);
   totalEl.textContent = money(total);
 }
 
-function submitOrder() {
-  const table = getTableFromUrl();
+async function submitOrder() {
   const items = Object.values(cart);
 
   if (items.length === 0) {
@@ -247,39 +261,36 @@ function submitOrder() {
     return;
   }
 
-  const request = qs("chefRequest").value.trim();
-  const total = items.reduce((s, it) => s + it.price * it.qty, 0);
+  const table = getTableFromUrl();
+  const request = qs("chefRequest")?.value.trim() || "";
+  const total = items.reduce((s, it) => s + Number(it.price) * it.qty, 0);
 
-  const orders = LS.get("orders", []);
-
-  orders.push({
-    id: cryptoId(),
+  const order = {
     table,
     items: items.map(it => ({
-      id: it.id,
       name: it.name,
-      price: it.price,
-      qty: it.qty
+      price: Number(it.price),
+      qty: it.qty,
+      category: it.category || "Other"
     })),
     request,
     total,
+    status: "Pending",
     date: todayStr(),
     createdAt: new Date().toISOString()
-  });
+  };
 
-  LS.set("orders", orders);
+  await push(ref(db, "orders"), order);
 
   cart = {};
-  qs("chefRequest").value = "";
+  if (qs("chefRequest")) qs("chefRequest").value = "";
+
   applyMenuFilters();
   renderCart();
 
   alert("Order sent to admin!");
 }
 
-/*****************
-  Admin Auth
-******************/
 function isAdminLoggedIn() {
   return localStorage.getItem("adminLoggedIn") === "true";
 }
@@ -293,13 +304,9 @@ function requireAdmin() {
 function adminLogin() {
   ensureSeed();
 
-  const u = (qs("username")?.value || "").trim();
-  const p = (qs("password")?.value || "").trim();
-
-  const cred = LS.get("adminCred", {
-    username: "admin",
-    password: "1234"
-  });
+  const u = qs("username")?.value.trim();
+  const p = qs("password")?.value.trim();
+  const cred = LS.get("adminCred", { username: "admin", password: "1234" });
 
   if (u === cred.username && p === cred.password) {
     localStorage.setItem("adminLoggedIn", "true");
@@ -315,88 +322,34 @@ function adminLogout() {
 }
 
 function resetAdminCred() {
-  LS.set("adminCred", {
-    username: "admin",
-    password: "1234"
-  });
-
-  localStorage.removeItem("adminLoggedIn");
+  LS.set("adminCred", { username: "admin", password: "1234" });
   alert("Reset done: admin / 1234");
-}
-
-/*****************
-  Admin Dashboard
-******************/
-function nowTimeHHMM(iso) {
-  if (!iso) return "-";
-
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-
-  return `${hh}:${mm}`;
 }
 
 function renderAdminPage() {
   ensureSeed();
   requireAdmin();
 
-  const orders = LS.get("orders", []);
-  const foods = LS.get("foods", []);
-  const today = todayStr();
+  onValue(ref(db, "orders"), snapshot => {
+    const data = snapshot.val() || {};
+    const orders = Object.entries(data).map(([id, order]) => ({ id, ...order }));
 
+    renderAdminStats(orders);
+    renderOrdersTable(orders);
+    renderSalesChart(orders);
+  });
+
+  renderFoodsTable(LS.get("foods", []));
+}
+
+function renderAdminStats(orders) {
+  const today = todayStr();
   const todayOrders = orders.filter(o => o.date === today);
   const todaySales = todayOrders.reduce((s, o) => s + Number(o.total || 0), 0);
 
-  qs("kpiTodayOrders").textContent = String(todayOrders.length);
-  qs("kpiTodaySales").textContent = `$${money(todaySales)}`;
-  qs("kpiTotalOrders").textContent = String(orders.length);
-
-  renderSalesChart(orders);
-  renderOrdersTable(orders);
-  renderFoodsTable(foods);
-}
-
-function renderSalesChart(orders) {
-  const canvas = document.getElementById("salesChart");
-  if (!canvas || typeof Chart === "undefined") return;
-
-  const map = {};
-
-  orders.forEach(o => {
-    const day = o.date || "";
-    if (!day) return;
-    map[day] = (map[day] || 0) + Number(o.total || 0);
-  });
-
-  const labels = Object.keys(map).sort();
-  const data = labels.map(d => map[d]);
-
-  if (window._salesChart) {
-    window._salesChart.destroy();
-  }
-
-  window._salesChart = new Chart(canvas, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [{
-        data,
-        backgroundColor: "#ffd600",
-        borderColor: "#111827",
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: { beginAtZero: true }
-      }
-    }
-  });
+  if (qs("kpiTodayOrders")) qs("kpiTodayOrders").textContent = todayOrders.length;
+  if (qs("kpiTodaySales")) qs("kpiTodaySales").textContent = `$${money(todaySales)}`;
+  if (qs("kpiTotalOrders")) qs("kpiTotalOrders").textContent = orders.length;
 }
 
 function renderOrdersTable(orders) {
@@ -404,7 +357,7 @@ function renderOrdersTable(orders) {
   if (!wrap) return;
 
   if (orders.length === 0) {
-    wrap.innerHTML = `<div class="card"><div class="note">No orders yet.</div></div>`;
+    wrap.innerHTML = `<div class="card"><p class="note">No orders yet.</p></div>`;
     return;
   }
 
@@ -412,33 +365,27 @@ function renderOrdersTable(orders) {
 
   wrap.innerHTML = `
     <div class="card">
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-        <h2 style="margin:0;">Orders</h2>
-        <button class="btn danger small" onclick="clearOrders()">Clear Orders</button>
-      </div>
-
-      <br>
-
+      <h2>Live Orders</h2>
       <table class="table">
         <thead>
           <tr>
-            <th>Time</th>
             <th>Table</th>
             <th>Items</th>
             <th>Request</th>
             <th>Total</th>
-            <th>Date</th>
+            <th>Status</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
           ${sorted.map(o => `
             <tr>
-              <td>${nowTimeHHMM(o.createdAt)}</td>
-              <td><span class="badge">Table ${escapeHtml(String(o.table))}</span></td>
+              <td><b>Table ${escapeHtml(o.table)}</b></td>
               <td>${(o.items || []).map(i => `${escapeHtml(i.name)} × ${i.qty}`).join("<br>")}</td>
               <td>${escapeHtml(o.request || "-")}</td>
-              <td><b>$${money(o.total || 0)}</b></td>
-              <td>${escapeHtml(o.date || "")}</td>
+              <td><b>$${money(o.total)}</b></td>
+              <td>${escapeHtml(o.status || "Pending")}</td>
+              <td><button class="btn danger small" onclick="deleteOrder('${o.id}')">Complete</button></td>
             </tr>
           `).join("")}
         </tbody>
@@ -447,34 +394,65 @@ function renderOrdersTable(orders) {
   `;
 }
 
+function renderSalesChart(orders) {
+  const canvas = qs("salesChart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const map = {};
+  orders.forEach(o => {
+    map[o.date] = (map[o.date] || 0) + Number(o.total || 0);
+  });
+
+  const labels = Object.keys(map).sort();
+  const data = labels.map(d => map[d]);
+
+  if (window._salesChart) window._salesChart.destroy();
+
+  window._salesChart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: "#ffd43b",
+        borderColor: "#101828",
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+async function deleteOrder(id) {
+  if (!confirm("Complete this order?")) return;
+  await remove(ref(db, `orders/${id}`));
+}
+
 function renderFoodsTable(foods) {
   const wrap = qs("foodsWrap");
   if (!wrap) return;
 
   wrap.innerHTML = `
     <div class="card">
-      <h2 style="margin-top:0;">Manage Foods</h2>
+      <h2>Manage Foods</h2>
 
       <label>Food name</label>
       <input id="newFoodName" placeholder="e.g., Pizza">
 
-      <br><br>
-
       <label>Price</label>
-      <input id="newFoodPrice" placeholder="e.g., 7.50" type="number" step="0.01">
-
-      <br><br>
+      <input id="newFoodPrice" type="number" step="0.01" placeholder="e.g., 7.50">
 
       <label>Category</label>
       <input id="newFoodCat" placeholder="Grill / Fry / Soup / Rice / Fast Food / Drink / Beer">
-
-      <br><br>
 
       <label>Image URL</label>
       <input id="newFoodImg" placeholder="https://...">
 
       <br><br>
-
       <button class="btn primary" onclick="addFood()">Add Food</button>
 
       <hr>
@@ -490,17 +468,16 @@ function renderFoodsTable(foods) {
             <th>Actions</th>
           </tr>
         </thead>
-
         <tbody>
           ${foods.map(f => `
             <tr>
-              <td><img src="${f.img}" alt="" style="width:64px;height:46px;object-fit:cover;border-radius:10px;background:#eee"></td>
+              <td><img src="${f.img}" style="width:64px;height:46px;object-fit:cover;border-radius:10px"></td>
               <td><input id="fn-${f.id}" value="${escapeHtml(f.name)}"></td>
-              <td><input id="fc-${f.id}" value="${escapeHtml(f.category || "Other")}"></td>
-              <td><input id="fp-${f.id}" type="number" step="0.01" value="${escapeHtml(String(f.price))}"></td>
+              <td><input id="fc-${f.id}" value="${escapeHtml(f.category)}"></td>
+              <td><input id="fp-${f.id}" value="${escapeHtml(f.price)}" type="number" step="0.01"></td>
               <td><input id="fi-${f.id}" value="${escapeHtml(f.img)}"></td>
               <td>
-                <button class="btn gray small" onclick="updateFood('${f.id}')">Update</button>
+                <button class="btn small" onclick="updateFood('${f.id}')">Update</button>
                 <button class="btn danger small" onclick="deleteFood('${f.id}')">Delete</button>
               </td>
             </tr>
@@ -512,56 +489,33 @@ function renderFoodsTable(foods) {
 }
 
 function addFood() {
-  const name = (qs("newFoodName")?.value || "").trim();
-  const price = Number(qs("newFoodPrice")?.value);
-  const cat = (qs("newFoodCat")?.value || "").trim() || "Other";
-  const img = (qs("newFoodImg")?.value || "").trim();
+  const name = qs("newFoodName").value.trim();
+  const price = Number(qs("newFoodPrice").value);
+  const category = qs("newFoodCat").value.trim() || "Other";
+  const img = qs("newFoodImg").value.trim();
 
-  if (!name || !isFinite(price) || price < 0 || !img) {
-    alert("Please enter name, price, category, and image URL.");
+  if (!name || !price || !img) {
+    alert("Please enter all food information.");
     return;
   }
 
   const foods = LS.get("foods", []);
-  foods.push({
-    id: cryptoId(),
-    name,
-    price,
-    category: cat,
-    img
-  });
-
+  foods.push({ id: cryptoId(), name, price, category, img });
   LS.set("foods", foods);
-
-  qs("newFoodName").value = "";
-  qs("newFoodPrice").value = "";
-  qs("newFoodCat").value = "";
-  qs("newFoodImg").value = "";
-
   renderFoodsTable(foods);
 }
 
 function updateFood(id) {
   const foods = LS.get("foods", []);
-  const idx = foods.findIndex(f => f.id === id);
-  if (idx === -1) return;
+  const index = foods.findIndex(f => f.id === id);
+  if (index === -1) return;
 
-  const name = (document.getElementById(`fn-${id}`)?.value || "").trim();
-  const cat = (document.getElementById(`fc-${id}`)?.value || "").trim() || "Other";
-  const price = Number(document.getElementById(`fp-${id}`)?.value);
-  const img = (document.getElementById(`fi-${id}`)?.value || "").trim();
-
-  if (!name || !isFinite(price) || price < 0 || !img) {
-    alert("Invalid data.");
-    return;
-  }
-
-  foods[idx] = {
-    ...foods[idx],
-    name,
-    category: cat,
-    price,
-    img
+  foods[index] = {
+    id,
+    name: qs(`fn-${id}`).value.trim(),
+    category: qs(`fc-${id}`).value.trim(),
+    price: Number(qs(`fp-${id}`).value),
+    img: qs(`fi-${id}`).value.trim()
   };
 
   LS.set("foods", foods);
@@ -569,25 +523,11 @@ function updateFood(id) {
 }
 
 function deleteFood(id) {
-  if (!confirm("Delete this food item?")) return;
-
-  const foods = LS.get("foods", []);
-  const next = foods.filter(f => f.id !== id);
-
-  LS.set("foods", next);
-  renderFoodsTable(next);
+  const foods = LS.get("foods", []).filter(f => f.id !== id);
+  LS.set("foods", foods);
+  renderFoodsTable(foods);
 }
 
-function clearOrders() {
-  if (!confirm("Clear all orders?")) return;
-
-  LS.set("orders", []);
-  renderAdminPage();
-}
-
-/*****************
-  Auto Init
-******************/
 window.addEventListener("DOMContentLoaded", () => {
   const page = document.body.getAttribute("data-page");
 
@@ -596,14 +536,10 @@ window.addEventListener("DOMContentLoaded", () => {
   if (page === "admin") renderAdminPage();
 });
 
-/*****************
-  Expose
-******************/
 window.increase = increase;
 window.decrease = decrease;
 window.removeItem = removeItem;
 window.submitOrder = submitOrder;
-
 window.setCategory = setCategory;
 window.applyMenuFilters = applyMenuFilters;
 
@@ -611,7 +547,7 @@ window.adminLogin = adminLogin;
 window.adminLogout = adminLogout;
 window.resetAdminCred = resetAdminCred;
 
+window.deleteOrder = deleteOrder;
 window.addFood = addFood;
 window.updateFood = updateFood;
 window.deleteFood = deleteFood;
-window.clearOrders = clearOrders;
